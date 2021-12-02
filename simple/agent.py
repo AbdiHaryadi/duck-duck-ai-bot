@@ -48,15 +48,19 @@ def agent(observation, configuration):
                 resource_tiles.append(cell)
     
     annotate_actions = []
-    while len(player.units) > 0 and len(actions) == 0:
+    stop = False
+    while len(player.units) > 0 and len(actions) == 0 and (not stop):
         # Debug
         annotate_actions.append(annotate.sidetext(action_state))
         
         worker = player.units[0] # Assume is worker, ambil unit paling pertama
-        if action_state == "INITIALIZE":
-            border_list = scan_initial_border(game_state, worker, resource_tiles)
+        if not worker.can_act():
+            stop = True
+            
+        elif action_state == "INITIALIZE":
+            border_list = scan_initial_border(game_state, resource_tiles)
             # Debug border_list
-            annotate_actions += [annotate.x(c.x, c.y) for c in border_list]
+            annotate_actions += [annotate.x(c.pos.x, c.pos.y) for c in border_list]
             annotate_actions.append(annotate.sidetext("Border length: " + str(len(border_list))))
             action_state = "FARM"
         
@@ -69,16 +73,12 @@ def agent(observation, configuration):
                 
         elif action_state == "BUILD":
             action = building(game_state, worker, border_list)
-            if action == None:
-                # Update border
-                border_list = update_border(game_state, border_list)
+            if action == None or action == "GO_FARMING":
+                # Debug border_list
+                annotate_actions += [annotate.x(c.pos.x, c.pos.y) for c in border_list]
+                annotate_actions.append(annotate.sidetext("Border length: " + str(len(border_list))))
+                
                 action_state = "FARM"
-            elif action == "GO_BUILDING":
-                action = farming(game_state, player, worker, resource_tiles)
-                if action == None:
-                    action_state = "BUILD"
-                else:
-                    actions.append(action)
             else:
                 actions.append(action)
                 

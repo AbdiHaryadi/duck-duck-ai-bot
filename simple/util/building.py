@@ -1,6 +1,6 @@
-from ..lux.game_objects import *
-from ..lux.game_map import *
-from ..lux.game import *
+from lux.game_objects import *
+from lux.game_map import *
+from lux.game import *
 
 from .update_border import *
 
@@ -20,7 +20,7 @@ def building(game_state: Game, worker: Unit, border_list: list[Cell]):
 
     nearest_border: Cell = None
     for border in border_list:
-        if nearest_border == None:
+        if nearest_border is None:
             nearest_border = border
         else:
             if worker.pos.distance_to(border.pos) < worker.pos.distance_to(nearest_border.pos):
@@ -29,7 +29,7 @@ def building(game_state: Game, worker: Unit, border_list: list[Cell]):
     if worker.pos.equals(nearest_border.pos):
         if worker.can_build(game_state.map):
             border_list = update_border(game_state, border_list, nearest_border)
-            return None
+            return worker.build_city()
         else:
             random_border = border_list[random.randint(0, len(border_list)-1)]
             return worker.move(worker.pos.direction_to(random_border.pos))

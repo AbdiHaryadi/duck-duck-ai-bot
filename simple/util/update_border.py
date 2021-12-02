@@ -1,6 +1,6 @@
-from ..lux.game_objects import *
-from ..lux.game_map import *
-from ..lux.game import *
+from lux.game_objects import *
+from lux.game_map import *
+from lux.game import *
 
 def update_border(game_state: Game, border_list: list[Cell], current_border: Cell):
     """

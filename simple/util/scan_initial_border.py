@@ -3,15 +3,15 @@ from lux.game_map import Position
 
 def scan_initial_border(game_state, resource_list):
     """
-    Return border_list: border hutan terdekat yang terdiri dari position.
+    Return border_list: border hutan terdekat yang terdiri dari cell.
     Pilih yang terdekat.
     """
     
     """
     Idea:
     - Get all trees
-    - Pick position such that it is adjacent to some tree and it is empty tile.
-    - Return list of position.
+    - Pick sell such that it is adjacent to some tree (include diagonally) and it is empty tile.
+    - Return list of cell.
     """
     
     # Get all trees
@@ -33,9 +33,9 @@ def scan_initial_border(game_state, resource_list):
                         pass
                     elif cell.citytile != None:
                         pass
-                    elif new_pos in border_list: # Warning: O(n^2) complexity!
+                    elif cell in border_list: # Warning: O(n^2) complexity!
                         pass
                     else:
-                        border_list.append(new_pos)
+                        border_list.append(cell)
     
     return border_list
