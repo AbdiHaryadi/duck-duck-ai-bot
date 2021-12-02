@@ -73,6 +73,12 @@ def agent(observation, configuration):
                 # Update border
                 border_list = update_border(game_state, border_list)
                 action_state = "FARM"
+            elif action == "GO_BUILDING":
+                action = farming(game_state, player, worker, resource_tiles)
+                if action == None:
+                    action_state = "BUILD"
+                else:
+                    actions.append(action)
             else:
                 actions.append(action)
                 
