@@ -1,16 +1,18 @@
 from lux.constants import Constants
+from lux.game_constants import GAME_CONSTANTS
+
 
 def farming(game_state, player, worker, resource_list):
     """
     Go to nearest resource_list tile if not there.
     Do nothing if there. (return move center action, not None)
-    Precondition: worker have less than 100 wood
+    Precondition: worker has space left in its cargo
     
-    Return action if wood < 100
-    Return None if wood == 100 (resource full)
+    Return action if no exists resource type that full in cargo
+    Return None if yes
     """
     # Note that resource_list is cells
-    if worker.cargo.wood == 100:
+    if worker.get_cargo_space_left() == 0:
         return None
     else:
         tile_distance = lambda t: t.pos.distance_to(worker.pos)
