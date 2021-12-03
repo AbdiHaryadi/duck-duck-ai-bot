@@ -23,7 +23,7 @@ def farming(game_state, player, worker, resource_list):
         selected_resource = min(gatherable_list, key=tile_distance)
         selected_direction = worker.pos.direction_to(selected_resource.pos)
         
-        return worker.move(selected_direction)
+        return [worker.move(selected_direction)]
     
 def gatherable(player, resource_type):
     if resource_type == Constants.RESOURCE_TYPES.WOOD:

@@ -16,11 +16,19 @@ DIRECTIONS = Constants.DIRECTIONS
 game_state = None
 action_state = "INITIALIZE"
 border_list = []
+action_queue = []
+
+# For multiagent
+action_queues = {}
+action_states = {}
 
 def agent(observation, configuration):
     global game_state
     global action_state
     global border_list
+    global action_queue
+    global action_queues
+    global action_states
 
     ### Do not edit ###
     if observation["step"] == 0:
@@ -48,43 +56,54 @@ def agent(observation, configuration):
                 resource_tiles.append(cell)
     
     annotate_actions = []
-    stop = False
-    while len(player.units) > 0 and len(actions) == 0 and (not stop):
-        # Debug
-        annotate_actions.append(annotate.sidetext(action_state))
+    if action_state == "INITIALIZE":
+        border_list = scan_initial_border(game_state, resource_tiles)
+        # Debug border_list
+        annotate_actions += [annotate.x(c.pos.x, c.pos.y) for c in border_list]
+        annotate_actions.append(annotate.sidetext("Border length: " + str(len(border_list))))
+        action_state = "NOT INITIALIZE"
         
-        worker = player.units[0] # Assume is worker, ambil unit paling pertama
-        if not worker.can_act():
-            stop = True
+    for worker in player.units:
+        # Assume no cart
+        if worker.id not in action_queues:
+            action_queues[worker.id] = []
             
-        elif action_state == "INITIALIZE":
-            border_list = scan_initial_border(game_state, resource_tiles)
-            # Debug border_list
-            annotate_actions += [annotate.x(c.pos.x, c.pos.y) for c in border_list]
-            annotate_actions.append(annotate.sidetext("Border length: " + str(len(border_list))))
-            action_state = "FARM"
+        if worker.id not in action_states:
+            # Tentukan role pertama dari worker baru
+            action_states[worker.id] = "FARM"
         
-        elif action_state == "FARM":
-            action = farming(game_state, player, worker, resource_tiles)
-            if action == None:
-                action_state = "BUILD"
-            else:
-                actions.append(action)
-                
-        elif action_state == "BUILD":
-            action = building(game_state, worker, border_list)
-            if action == None or action == "GO_FARMING":
-                # Debug border_list
-                annotate_actions += [annotate.x(c.pos.x, c.pos.y) for c in border_list]
-                annotate_actions.append(annotate.sidetext("Border length: " + str(len(border_list))))
-                
-                action_state = "FARM"
-            else:
-                actions.append(action)
-                
-        else:
-            raise ValueError("action_state invalid: {}".format(action_state))
+        while len(action_queues[worker.id]) == 0 and worker.can_act():
+            # Debug
+            annotate_actions.append(annotate.sidetext("{}: {}".format(worker.id, action_states[worker.id])))
             
+            if action_states[worker.id] == "FARM":
+                action = farming(game_state, player, worker, resource_tiles)
+                if action == None:
+                    action_states[worker.id] = "BUILD"
+                else:
+                    action_queues[worker.id] += action
+                    
+            elif action_states[worker.id] == "BUILD":
+                action = building(game_state, worker, border_list)
+                if action == None or action == "GO_FARMING":
+                    # Debug border_list
+                    # TODO: Jangan panggil terus kalau sudah banyak worker
+                    annotate_actions += [annotate.x(c.pos.x, c.pos.y) for c in border_list]
+                    annotate_actions.append(annotate.sidetext("Border length: " + str(len(border_list))))
+                    
+                    action_states[worker.id] = "FARM"
+                else:
+                    action_queues[worker.id] += action
+                    
+            else:
+                raise ValueError("action_state invalid: {}".format(action_states[worker.id]))
+    
+        if len(action_queues[worker.id]) > 0 and worker.can_act():
+            new_action = action_queues[worker.id].pop(0)
+            actions.append(new_action)
+            annotate_actions.append(annotate.sidetext(new_action))
+            annotate_actions.append(annotate.sidetext("{}: Queue length: {}".format(worker.id, len(action_queues[worker.id]))))
+    
     actions += annotate_actions
     
     # Do your bot

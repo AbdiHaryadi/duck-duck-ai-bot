@@ -4,6 +4,8 @@ from lux.game import *
 
 from .update_border import *
 
+from .Pathfinder2 import Pathfinder2
+
 import random
 
 def building(game_state: Game, worker: Unit, border_list: list[Cell]):
@@ -17,7 +19,7 @@ def building(game_state: Game, worker: Unit, border_list: list[Cell]):
     """
     if worker.get_cargo_space_left() > 0:
         return "GO_FARMING"
-
+    
     nearest_border: Cell = None
     for border in border_list:
         if nearest_border is None:
@@ -25,13 +27,30 @@ def building(game_state: Game, worker: Unit, border_list: list[Cell]):
         else:
             if worker.pos.distance_to(border.pos) < worker.pos.distance_to(nearest_border.pos):
                 nearest_border = border
-
-    if worker.pos.equals(nearest_border.pos):
+    # Problem: bisa saja nearest_border sudah memiliki city
+    """
+    Jika mau ubah urutannya (misalkan corner dulu), ubah bagian di atas.
+    """
+    
+    if nearest_border is None:
+        """
+        random_border = border_list[random.randint(0, len(border_list)-1)]
+        pathfinder = Pathfinder2()
+        # return [worker.move(worker.pos.direction_to(random_border.pos))]
+        return pathfinder.find_path(game_state, worker, random_border.pos)
+        """
+        random_border = border_list[random.randint(0, len(border_list)-1)]
+        return [worker.move(worker.pos.direction_to(random_border.pos))]
+    elif worker.pos.equals(nearest_border.pos):
         if worker.can_build(game_state.map):
-            border_list = update_border(game_state, border_list, nearest_border)
-            return worker.build_city()
+            new_border_list = update_border(game_state, border_list, nearest_border)
+            for idx, cell in enumerate(new_border_list):
+                border_list[idx] = cell
+            return [worker.build_city()]
         else:
             random_border = border_list[random.randint(0, len(border_list)-1)]
-            return worker.move(worker.pos.direction_to(random_border.pos))
+            return [worker.move(worker.pos.direction_to(random_border.pos))]
     """WARNING: 'direction_to()' need to be changed into A* based direction finder"""
-    return worker.move(worker.pos.direction_to(nearest_border.pos))
+    pathfinder = Pathfinder2()
+    return pathfinder.find_path(game_state, worker, nearest_border.pos)
+    # return [worker.move(worker.pos.direction_to(nearest_border.pos))]
