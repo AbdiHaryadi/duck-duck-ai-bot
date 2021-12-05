@@ -4,6 +4,8 @@ from lux.constants import Constants
 from lux.game_objects import CityTile
 from lux import annotate
 
+import random
+
 DIRECTIONS = Constants.DIRECTIONS
 RESOURCE_TYPES = Constants.RESOURCE_TYPES
 
@@ -11,7 +13,7 @@ class Pathfinder2:
     def __init__(self):
         pass
         
-    def find_path(self, game_state, worker, target, max_turns=15):
+    def find_path(self, game_state, worker, target, max_turns=15, hit_player_ct=False):
         """
         Find a path for worker to target which is goes nearer than before.
         Returns minimum-turn path if any path exists.
@@ -36,6 +38,11 @@ class Pathfinder2:
                     only if not in the frontier or explored set
         """
         
+        other_units = []
+        for p in game_state.players:
+            other_units += p.units
+        other_units.remove(worker)
+        
         frontier = [(
             Position(worker.pos.x, worker.pos.y), # current position
             0,                                    # score so far
@@ -50,12 +57,15 @@ class Pathfinder2:
         stop_search = False
         solution = None
         city_tile_pos = []
+        player_city_tile_pos = []
         resource_pos = []
         for y in range(game_state.map_height):
             for x in range(game_state.map_width):
                 cell = game_state.map.get_cell(x, y)
                 if isinstance(cell.citytile, CityTile):
                     city_tile_pos.append(cell.pos)
+                    if cell.citytile.team == worker.team:
+                        player_city_tile_pos.append(cell.pos)
                 """
                 elif isinstance(cell.resource, Resource):
                     if cell.resource.type == RESOURCE_TYPES.COAL:
@@ -99,7 +109,9 @@ class Pathfinder2:
                             
                         if current_pos.x < game_state.map_width - 1: # East condition
                             directions.append(DIRECTIONS.EAST)
-                            
+                        
+                        random.shuffle(directions)
+                        
                         for d in directions:
                             new_pos = current_pos.translate(d, 1)
                             cell = game_state.map.get_cell_by_pos(new_pos)
@@ -119,7 +131,7 @@ class Pathfinder2:
                                 new_cooldown = cooldown + 1
                             new_turn = current_turn + 1
                                 
-                            if (new_pos not in explored) and (new_pos not in city_tile_pos) and new_fuel >= 0:
+                            if (new_pos == target or ((new_pos not in explored) and ((new_pos not in city_tile_pos) or (hit_player_ct and new_pos in player_city_tile_pos)))) and new_fuel >= 0 and (min(list(map(lambda u: u.pos.distance_to(new_pos), other_units))) > (current_g / 2 + 1) or random.random() > 0.2 ** (current_g / 2 + 1)):
                                 new_g = current_g + 1 # Asumsikan 1 cost untuk setiap aksi
                                 new_h = new_pos.distance_to(target)
                                 new_actions = actions + [worker.move(d)]
