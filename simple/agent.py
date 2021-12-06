@@ -12,6 +12,7 @@ from util.farming import farming
 from util.scan_initial_border import scan_initial_border
 from util.update_border import update_border
 from util.go_to_city import go_to_city
+from util.TaskManager import TaskManager
 
 DIRECTIONS = Constants.DIRECTIONS
 game_state = None
@@ -43,6 +44,7 @@ def agent(observation, configuration):
         game_state._update(observation["updates"])
     
     actions = []
+    task_manager = TaskManager()
 
     ### AI Code goes down here! ### 
     player = game_state.players[observation.player]
@@ -149,10 +151,16 @@ def agent(observation, configuration):
     
         if len(action_queues[worker.id]) > 0 and worker.can_act():
             new_action = action_queues[worker.id].pop(0)
-            actions.append(new_action)
+            
+            # USING TASK MANAGER
+            # actions.append(new_action)
+            task_manager.submit_action_unit(new_action)
+
             annotate_actions.append(annotate.sidetext(new_action))
             annotate_actions.append(annotate.sidetext("{}: Queue length: {}".format(worker.id, len(action_queues[worker.id]))))
-        
+    
+    actions = task_manager.get_action_list()
+
     # Greedy build worker for test, two units only
     # Not good above 2 because it will be overwhelmed to maintain the city
     k = min(player.city_tile_count, 4) - len(player.units)
