@@ -12,7 +12,6 @@ from util.farming import farming
 from util.scan_initial_border import scan_initial_border
 from util.update_border import update_border
 from util.go_to_city import go_to_city
-from util.TaskManager import TaskManager
 
 DIRECTIONS = Constants.DIRECTIONS
 game_state = None
@@ -44,7 +43,6 @@ def agent(observation, configuration):
         game_state._update(observation["updates"])
     
     actions = []
-    task_manager = TaskManager()
 
     ### AI Code goes down here! ### 
     player = game_state.players[observation.player]
@@ -88,48 +86,12 @@ def agent(observation, configuration):
             if action_states[worker.id] == "FARM":
                 action = farming(game_state, player, worker, resource_tiles)
                 if action == None:
-                    # Assume single agent need to handle city that nearest than all worker
-                    need_fuel_cities = list(filter(lambda c: c.fuel <= (c.get_light_upkeep() + 23) * 10, player.cities.values()))
-                    """
-                    need_fuel_cities = list(filter(
-                        lambda c: min(player.units, key=lambda u: min(
-                            list(map(
-                                lambda ct: u.pos.distance_to(ct.pos),
-                                c.citytiles
-                            ))
-                        )).id == worker.id,
-                        need_fuel_cities
-                    ))
-                    """
-                    # Just take cities that near to worker
-                    need_fuel_cities = list(filter(
-                        lambda c: min(
-                            list(map(
-                                lambda ct: worker.pos.distance_to(ct.pos),
-                                c.citytiles
-                            ))
-                        ) <= 2,
-                        need_fuel_cities
-                    ))
+                    need_fuel_cities = list(player.cities.values())
                     if len(need_fuel_cities) > 0:
-                        # city_prio_func = lambda c: c.fuel / c.get_light_upkeep()
-                        city_prio_func = lambda c: min(list(map(lambda ct: ct.pos.distance_to(worker.pos), c.citytiles)))
-                        action_data[worker.id]["cityid"] = min(need_fuel_cities, key=city_prio_func).cityid
+                        action_data[worker.id]["cityid"] = need_fuel_cities[0].cityid
                         action_states[worker.id] = "REFUEL"
                     else:
-                        action_states[worker.id] = "BUILD"
-                else:
-                    action_queues[worker.id] += action
-                    
-            elif action_states[worker.id] == "BUILD":
-                action = building(game_state, worker, border_list)
-                if action == None or action == "GO_FARMING":
-                    # Debug border_list
-                    # TODO: Jangan panggil terus kalau sudah banyak worker
-                    annotate_actions += [annotate.x(c.pos.x, c.pos.y) for c in border_list]
-                    annotate_actions.append(annotate.sidetext("Border length: " + str(len(border_list))))
-                    
-                    action_states[worker.id] = "FARM"
+                        action_queues[worker.id].append(annotate.sidetext("Do nothing"))
                 else:
                     action_queues[worker.id] += action
                     
@@ -139,8 +101,6 @@ def agent(observation, configuration):
                     refuel_actions = go_to_city(game_state, worker, city)
                     if len(refuel_actions) > 0:
                         action_queues[worker.id] += refuel_actions
-                    elif game_state.turn % 40 >= 30: # night
-                        action_states[worker.id] = "FARM"
                     else:
                         action_states[worker.id] = "FARM"
                         
@@ -151,27 +111,8 @@ def agent(observation, configuration):
     
         if len(action_queues[worker.id]) > 0 and worker.can_act():
             new_action = action_queues[worker.id].pop(0)
-            
-            # USING TASK MANAGER
-            # actions.append(new_action)
-            task_manager.submit_action_unit(game_state, worker, new_action)
-
+            actions.append(new_action)
             annotate_actions.append(annotate.sidetext(new_action))
-            annotate_actions.append(annotate.sidetext("{}: Queue length: {}".format(worker.id, len(action_queues[worker.id]))))
-    
-    actions = task_manager.get_action_list()
-
-    # Greedy build worker for test, two units only
-    # Not good above 2 because it will be overwhelmed to maintain the city
-    k = min(player.city_tile_count, 4) - len(player.units)
-    for _, city in player.cities.items():
-        for ct in city.citytiles:
-            if ct.can_act():
-                if k > 0:
-                    actions.append(ct.build_worker())
-                    k -= 1
-                elif not player.researched_uranium():
-                    actions.append(ct.research())
     
     actions += annotate_actions
     

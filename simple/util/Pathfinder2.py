@@ -5,6 +5,7 @@ from lux.game_objects import CityTile
 from lux import annotate
 
 import random
+import time
 
 DIRECTIONS = Constants.DIRECTIONS
 RESOURCE_TYPES = Constants.RESOURCE_TYPES
@@ -13,7 +14,7 @@ class Pathfinder2:
     def __init__(self):
         pass
         
-    def find_path(self, game_state, worker, target, max_turns=15, hit_player_ct=False):
+    def find_path(self, game_state, worker, target, max_turns=10, hit_player_ct=False, time_limit=999):
         """
         Find a path for worker to target which is goes nearer than before.
         Returns minimum-turn path if any path exists.
@@ -37,6 +38,8 @@ class Pathfinder2:
                 expand the chosen node, adding the resulting nodes to the frontier
                     only if not in the frontier or explored set
         """
+        
+        deadline = time.time() + time_limit
         
         other_units = []
         for p in game_state.players:
@@ -88,7 +91,7 @@ class Pathfinder2:
             else:
                 current_pos, current_g, current_h, actions, current_turn, current_fuel, cooldown = frontier.pop(0)
                 # if (current_pos.equals(target) or current_g >= max_turns):
-                if current_pos.equals(target) or current_g >= max_turns:
+                if current_pos.equals(target) or current_g >= max_turns or time.time() > deadline:
                     if current_fuel > current_h:
                         solution = actions
                         stop_search = True
