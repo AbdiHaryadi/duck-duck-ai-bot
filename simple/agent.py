@@ -88,6 +88,7 @@ def agent(observation, configuration):
                 if action == None:
                     # Assume single agent need to handle city that nearest than all worker
                     need_fuel_cities = list(filter(lambda c: c.fuel <= (c.get_light_upkeep() + 23) * 10, player.cities.values()))
+                    """
                     need_fuel_cities = list(filter(
                         lambda c: min(player.units, key=lambda u: min(
                             list(map(
@@ -95,6 +96,17 @@ def agent(observation, configuration):
                                 c.citytiles
                             ))
                         )).id == worker.id,
+                        need_fuel_cities
+                    ))
+                    """
+                    # Just take cities that near to worker
+                    need_fuel_cities = list(filter(
+                        lambda c: min(
+                            list(map(
+                                lambda ct: worker.pos.distance_to(ct.pos),
+                                c.citytiles
+                            ))
+                        ) <= 2,
                         need_fuel_cities
                     ))
                     if len(need_fuel_cities) > 0:
@@ -126,8 +138,7 @@ def agent(observation, configuration):
                     if len(refuel_actions) > 0:
                         action_queues[worker.id] += refuel_actions
                     elif game_state.turn % 40 >= 30: # night
-                        # Stay here
-                        action_queues[worker.id].append(annotate.sidetext("Stay ..."))
+                        action_states[worker.id] = "FARM"
                     else:
                         action_states[worker.id] = "FARM"
                         
@@ -144,17 +155,15 @@ def agent(observation, configuration):
         
     # Greedy build worker for test, two units only
     # Not good above 2 because it will be overwhelmed to maintain the city
-    k = min(player.city_tile_count, 2) - len(player.units)
-    if k > 0:
-        for cityid, city in player.cities.items():
-            if k == 0:
-                break
-            for ct in city.citytiles:
-                if k == 0:
-                    break
-                if ct.can_act():
+    k = min(player.city_tile_count, 4) - len(player.units)
+    for _, city in player.cities.items():
+        for ct in city.citytiles:
+            if ct.can_act():
+                if k > 0:
                     actions.append(ct.build_worker())
                     k -= 1
+                elif not player.researched_uranium():
+                    actions.append(ct.research())
     
     actions += annotate_actions
     
